@@ -23,41 +23,47 @@ import os
 import random
 import re
 import sys
+import math
+import os
+import random
+import re
+import sys
+import pandas as pd
+import numpy as np
+from scipy import optimize
+#import matplotlib.pyplot as plt
+from io import StringIO
+
 
 if __name__ == '__main__':
     timeCharged = float(input().strip())
 
+    # Read the data using pandas
+    data = pd.read_csv('trainingdata.txt', header=None, names=["TimeCharged", "TimeLasted"])
+    
+    # training data: Range when not fully charge range
+    index_values = data.query("TimeCharged <= 4.01").index.tolist()
+    x = data.TimeCharged[index_values]
+    y = data.TimeLasted[index_values]
 
+    # Equation to be solved from book https://pythonnumericalmethods.studentorg.berkeley.edu/notebooks/chapter16.02-Least-Squares-Regression-Derivation-Linear-Algebra.html
+    # y = b1 * f1(x)
+   
+    # A Matrix
+    # Only one linear basis function used. Important: Method allows any kind and number of basis function, as long as beta params are constants
+    # Basis function is  evaluated at the input measured values. In this case f1(x) = x 
+    A = np.array(x).reshape(-1,1)
 
-    data = []
-    with open("trainingdata.txt", "r") as file:
-        for line in file:
-            try:
-                x_str, y_str = line.strip().split(',')
-                x, y = float(x_str), float(y_str)
-                # Only include data where y != 8.0 (battery maxed out)
-                if x > 0 and y != 8.0:
-                    data.append((x, y))
-            except:
-                continue
+    # Y Matrix: Output measured values
+    Y = np.array(y).reshape(-1,1) 
 
-    X = [d[0] for d in data]
-    Y = [d[1] for d in data]
-    n = len(X)
-
-    # Compute mean
-    mean_x = sum(X) / n
-    mean_y = sum(Y) / n
-
-    # Compute slope (m) and intercept (c)
-    numerator = sum((X[i] - mean_x) * (Y[i] - mean_y) for i in range(n))
-    denominator = sum((X[i] - mean_x) ** 2 for i in range(n))
-
-    m = numerator / denominator
-    c = mean_y - m * mean_x
-
-    # Predict
-    prediction = m * timeCharged + c
-
-    # Print result rounded to 2 decimal places
-    print(f"{prediction:.2f}")
+    # Here is where the magic happends: Least square regression to find beta parameters
+    beta_params = np.linalg.inv(A.T @ A) @ A.T @ Y
+    
+    
+   # Make prediction
+    if timeCharged > 4.01:  # Battery fully charged
+        print(8)  
+    else:
+        predicted_time = timeCharged *  beta_params[0][0]
+        print(predicted_time)  # Output the predicted battery life
